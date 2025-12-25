@@ -1,4 +1,4 @@
--- Skeleton ESP + Corner Box + Distance + Line + Health | By Nam
+-- Skeleton ESP + Full Box (2D) + Corner + Distance + Line + Health | By Nam
 
 -- ================= LOAD RAYFIELD =================
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -18,9 +18,10 @@ local LocalPlayer = Players.LocalPlayer
 
 -- ================= SETTINGS =================
 local ESP_ENABLED = true
+local BOX_ENABLED = true
+local CORNER_ENABLED = true
 local LINE_ENABLED = true
 local HEALTH_ENABLED = true
-local CORNER_ENABLED = true
 local DIST_ENABLED = true
 local ESP_TABLE = {}
 
@@ -32,15 +33,14 @@ local function newLine(t)
     return l
 end
 
--- ================= ESP CREATE =================
+-- ================= CREATE =================
 local function createESP(player)
     if player == LocalPlayer then return end
 
-    local skel = {
-        head = newLine(1), torso = newLine(2),
-        larm = newLine(1), rarm = newLine(1),
-        lleg = newLine(1), rleg = newLine(1),
-    }
+    local box = Drawing.new("Square")
+    box.Thickness = 1
+    box.Filled = false
+    box.Visible = false
 
     local corner = {
         tl1=newLine(2), tl2=newLine(2), tr1=newLine(2), tr2=newLine(2),
@@ -63,17 +63,23 @@ local function createESP(player)
     local health = newLine(3)
 
     ESP_TABLE[player] = {
-        skel=skel, corner=corner,
-        name=name, dist=dist,
-        line=line, health=health
+        box = box,
+        corner = corner,
+        name = name,
+        dist = dist,
+        line = line,
+        health = health
     }
 end
 
 local function removeESP(player)
     if ESP_TABLE[player] then
-        for _,g in pairs(ESP_TABLE[player]) do
-            if type(g)=="table" then for _,v in pairs(g) do v:Remove() end
-            else g:Remove() end
+        for _,v in pairs(ESP_TABLE[player]) do
+            if type(v)=="table" then
+                for _,x in pairs(v) do x:Remove() end
+            else
+                v:Remove()
+            end
         end
         ESP_TABLE[player]=nil
     end
@@ -85,7 +91,6 @@ Players.PlayerRemoving:Connect(removeESP)
 
 -- ================= RENDER =================
 RunService.RenderStepped:Connect(function()
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
 
@@ -94,7 +99,7 @@ RunService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-        if hum and hrp and hum.Health>0 then
+        if hum and hrp and hum.Health > 0 then
             local teamColor = Color3.fromRGB(255,0,0)
             if player.Team and player.Team.TeamColor then
                 teamColor = player.Team.TeamColor.Color
@@ -102,40 +107,44 @@ RunService.RenderStepped:Connect(function()
 
             local pos,on = Camera:WorldToViewportPoint(hrp.Position)
             if on and ESP_ENABLED then
+                local size = Vector2.new(2000/pos.Z, 3000/pos.Z)
+                local x,y = pos.X-size.X/2, pos.Y-size.Y/2
+
+                -- Full Box (2D)
+                if BOX_ENABLED then
+                    esp.box.Size = size
+                    esp.box.Position = Vector2.new(x,y)
+                    esp.box.Color = teamColor
+                    esp.box.Visible = true
+                else
+                    esp.box.Visible = false
+                end
+
                 -- Name
                 esp.name.Text = player.Name
                 esp.name.Color = teamColor
-                esp.name.Position = Vector2.new(pos.X, pos.Y - 25)
+                esp.name.Position = Vector2.new(pos.X, y-14)
                 esp.name.Visible = true
 
                 -- Distance
                 if DIST_ENABLED and myHRP then
-                    local d = (myHRP.Position - hrp.Position).Magnitude
+                    local d = (myHRP.Position-hrp.Position).Magnitude
                     esp.dist.Text = math.floor(d).." studs"
                     esp.dist.Color = teamColor
-                    esp.dist.Position = Vector2.new(pos.X, pos.Y - 12)
+                    esp.dist.Position = Vector2.new(pos.X, y-2)
                     esp.dist.Visible = true
                 else
                     esp.dist.Visible = false
                 end
             else
+                esp.box.Visible=false
                 esp.name.Visible=false
                 esp.dist.Visible=false
             end
-
-            -- Line
-            if LINE_ENABLED and on then
-                esp.line.From=center
-                esp.line.To=Vector2.new(pos.X,pos.Y)
-                esp.line.Color=teamColor
-                esp.line.Visible=true
-            else
-                esp.line.Visible=false
-            end
         else
+            esp.box.Visible=false
             esp.name.Visible=false
             esp.dist.Visible=false
-            esp.line.Visible=false
         end
     end
 end)
@@ -144,7 +153,6 @@ end)
 local Tab = Window:CreateTab("ESP", 4483362458)
 
 Tab:CreateToggle({Name="ESP",CurrentValue=true,Callback=function(v) ESP_ENABLED=v end})
+Tab:CreateToggle({Name="Full Box (2D)",CurrentValue=true,Callback=function(v) BOX_ENABLED=v end})
 Tab:CreateToggle({Name="Corner Box",CurrentValue=true,Callback=function(v) CORNER_ENABLED=v end})
-Tab:CreateToggle({Name="Line (Tracer)",CurrentValue=true,Callback=function(v) LINE_ENABLED=v end})
-Tab:CreateToggle({Name="Health Bar",CurrentValue=true,Callback=function(v) HEALTH_ENABLED=v end})
 Tab:CreateToggle({Name="Distance",CurrentValue=true,Callback=function(v) DIST_ENABLED=v end})
