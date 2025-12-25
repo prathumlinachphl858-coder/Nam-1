@@ -1,4 +1,4 @@
--- Skeleton ESP + Full Box (2D) + Distance + Line + Health | By Nam
+-- ESP + Full Box (2D) + Distance + Line + Health | By Nam
 
 -- ================= LOAD RAYFIELD =================
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -70,7 +70,7 @@ local function removeESP(player)
         for _,v in pairs(ESP_TABLE[player]) do
             v:Remove()
         end
-        ESP_TABLE[player]=nil
+        ESP_TABLE[player] = nil
     end
 end
 
@@ -99,7 +99,7 @@ RunService.RenderStepped:Connect(function()
                 local size = Vector2.new(2000/pos.Z, 3000/pos.Z)
                 local x,y = pos.X-size.X/2, pos.Y-size.Y/2
 
-                -- Full Box (2D)
+                -- Full Box
                 if BOX_ENABLED then
                     esp.box.Size = size
                     esp.box.Position = Vector2.new(x,y)
@@ -126,29 +126,46 @@ RunService.RenderStepped:Connect(function()
                     esp.dist.Visible = false
                 end
 
-                -- Line ESP
+                -- Line
                 if LINE_ENABLED and myHRP then
-                    esp.line.From = Vector2.new(
-                        Camera.ViewportSize.X / 2,
-                        Camera.ViewportSize.Y
-                    )
+                    esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                     esp.line.To = Vector2.new(pos.X, pos.Y)
                     esp.line.Color = teamColor
                     esp.line.Visible = true
                 else
                     esp.line.Visible = false
                 end
+
+                -- Health Bar (แนวตั้ง ข้าง Box)
+                if HEALTH_ENABLED then
+                    local hpPercent = hum.Health / hum.MaxHealth
+                    local barHeight = size.Y
+                    local barX = x - 6
+
+                    esp.health.From = Vector2.new(barX, y + barHeight)
+                    esp.health.To = Vector2.new(barX, y + barHeight - (barHeight * hpPercent))
+                    esp.health.Color = Color3.fromRGB(
+                        255 - (hpPercent * 255),
+                        hpPercent * 255,
+                        0
+                    )
+                    esp.health.Visible = true
+                else
+                    esp.health.Visible = false
+                end
             else
                 esp.box.Visible=false
                 esp.name.Visible=false
                 esp.dist.Visible=false
                 esp.line.Visible=false
+                esp.health.Visible=false
             end
         else
             esp.box.Visible=false
             esp.name.Visible=false
             esp.dist.Visible=false
             esp.line.Visible=false
+            esp.health.Visible=false
         end
     end
 end)
@@ -157,6 +174,7 @@ end)
 local Tab = Window:CreateTab("ESP", 4483362458)
 
 Tab:CreateToggle({Name="ESP",CurrentValue=true,Callback=function(v) ESP_ENABLED=v end})
-Tab:CreateToggle({Name="Full Box (2D)",CurrentValue=true,Callback=function(v) BOX_ENABLED=v end})
+Tab:CreateToggle({Name="Full Box",CurrentValue=true,Callback=function(v) BOX_ENABLED=v end})
 Tab:CreateToggle({Name="Distance",CurrentValue=true,Callback=function(v) DIST_ENABLED=v end})
 Tab:CreateToggle({Name="Line",CurrentValue=true,Callback=function(v) LINE_ENABLED=v end})
+Tab:CreateToggle({Name="Health",CurrentValue=true,Callback=function(v) HEALTH_ENABLED=v end})
