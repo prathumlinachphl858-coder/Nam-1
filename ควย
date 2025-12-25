@@ -136,15 +136,30 @@ RunService.RenderStepped:Connect(function()
                 else
                     esp.dist.Visible = false
                 end
+
+                -- Line ESP (ใส่กลับมา)
+                if LINE_ENABLED and myHRP then
+                    esp.line.From = Vector2.new(
+                        Camera.ViewportSize.X / 2,
+                        Camera.ViewportSize.Y
+                    )
+                    esp.line.To = Vector2.new(pos.X, pos.Y)
+                    esp.line.Color = teamColor
+                    esp.line.Visible = true
+                else
+                    esp.line.Visible = false
+                end
             else
                 esp.box.Visible=false
                 esp.name.Visible=false
                 esp.dist.Visible=false
+                esp.line.Visible=false
             end
         else
             esp.box.Visible=false
             esp.name.Visible=false
             esp.dist.Visible=false
+            esp.line.Visible=false
         end
     end
 end)
