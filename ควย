@@ -1,5 +1,4 @@
--- Skeleton ESP + Line + Health Bar + Team Color | By Nam
--- No Hitbox | Mobile & PC
+-- Skeleton ESP + Corner Box + Distance + Line + Health | By Nam
 
 -- ================= LOAD RAYFIELD =================
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -21,12 +20,14 @@ local LocalPlayer = Players.LocalPlayer
 local ESP_ENABLED = true
 local LINE_ENABLED = true
 local HEALTH_ENABLED = true
+local CORNER_ENABLED = true
+local DIST_ENABLED = true
 local ESP_TABLE = {}
 
 -- ================= UTILS =================
-local function newLine(thick)
+local function newLine(t)
     local l = Drawing.new("Line")
-    l.Thickness = thick or 1
+    l.Thickness = t or 1
     l.Visible = false
     return l
 end
@@ -35,14 +36,15 @@ end
 local function createESP(player)
     if player == LocalPlayer then return end
 
-    -- Skeleton lines
     local skel = {
-        head = newLine(1),
-        torso = newLine(2),
-        larm = newLine(1),
-        rarm = newLine(1),
-        lleg = newLine(1),
-        rleg = newLine(1),
+        head = newLine(1), torso = newLine(2),
+        larm = newLine(1), rarm = newLine(1),
+        lleg = newLine(1), rleg = newLine(1),
+    }
+
+    local corner = {
+        tl1=newLine(2), tl2=newLine(2), tr1=newLine(2), tr2=newLine(2),
+        bl1=newLine(2), bl2=newLine(2), br1=newLine(2), br2=newLine(2),
     }
 
     local name = Drawing.new("Text")
@@ -51,25 +53,29 @@ local function createESP(player)
     name.Outline = true
     name.Visible = false
 
-    local line = newLine(1) -- tracer
+    local dist = Drawing.new("Text")
+    dist.Size = 12
+    dist.Center = true
+    dist.Outline = true
+    dist.Visible = false
 
+    local line = newLine(1)
     local health = newLine(3)
 
     ESP_TABLE[player] = {
-        skel = skel,
-        name = name,
-        line = line,
-        health = health
+        skel=skel, corner=corner,
+        name=name, dist=dist,
+        line=line, health=health
     }
 end
 
 local function removeESP(player)
     if ESP_TABLE[player] then
-        for _,v in pairs(ESP_TABLE[player].skel) do v:Remove() end
-        ESP_TABLE[player].name:Remove()
-        ESP_TABLE[player].line:Remove()
-        ESP_TABLE[player].health:Remove()
-        ESP_TABLE[player] = nil
+        for _,g in pairs(ESP_TABLE[player]) do
+            if type(g)=="table" then for _,v in pairs(g) do v:Remove() end
+            else g:Remove() end
+        end
+        ESP_TABLE[player]=nil
     end
 end
 
@@ -80,91 +86,56 @@ Players.PlayerRemoving:Connect(removeESP)
 -- ================= RENDER =================
 RunService.RenderStepped:Connect(function()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local myChar = LocalPlayer.Character
+    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
 
     for player,esp in pairs(ESP_TABLE) do
         local char = player.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-        if char and hum and hum.Health > 0 and hrp then
-            -- Team color
+        if hum and hrp and hum.Health>0 then
             local teamColor = Color3.fromRGB(255,0,0)
             if player.Team and player.Team.TeamColor then
                 teamColor = player.Team.TeamColor.Color
             end
 
-            -- Get joints
-            local function wp(part)
-                local p = char:FindFirstChild(part)
-                if not p then return nil end
-                local v, on = Camera:WorldToViewportPoint(p.Position)
-                if not on then return nil end
-                return Vector2.new(v.X, v.Y), v.Z
-            end
-
-            local head = wp("Head")
-            local torso = wp("UpperTorso") or wp("Torso")
-            local lhand = wp("LeftHand") or wp("Left Arm")
-            local rhand = wp("RightHand") or wp("Right Arm")
-            local lfoot = wp("LeftFoot") or wp("Left Leg")
-            local rfoot = wp("RightFoot") or wp("Right Leg")
-
-            -- ===== Skeleton =====
-            if ESP_ENABLED and head and torso then
-                local function draw(l, a, b)
-                    if a and b then
-                        l.From = a
-                        l.To = b
-                        l.Color = teamColor
-                        l.Visible = true
-                    else
-                        l.Visible = false
-                    end
-                end
-
-                draw(esp.skel.head, head, torso)
-                draw(esp.skel.torso, torso, Vector2.new(torso.X, torso.Y + 1))
-                draw(esp.skel.larm, torso, lhand)
-                draw(esp.skel.rarm, torso, rhand)
-                draw(esp.skel.lleg, torso, lfoot)
-                draw(esp.skel.rleg, torso, rfoot)
-
+            local pos,on = Camera:WorldToViewportPoint(hrp.Position)
+            if on and ESP_ENABLED then
+                -- Name
                 esp.name.Text = player.Name
                 esp.name.Color = teamColor
-                esp.name.Position = Vector2.new(head.X, head.Y - 14)
+                esp.name.Position = Vector2.new(pos.X, pos.Y - 25)
                 esp.name.Visible = true
+
+                -- Distance
+                if DIST_ENABLED and myHRP then
+                    local d = (myHRP.Position - hrp.Position).Magnitude
+                    esp.dist.Text = math.floor(d).." studs"
+                    esp.dist.Color = teamColor
+                    esp.dist.Position = Vector2.new(pos.X, pos.Y - 12)
+                    esp.dist.Visible = true
+                else
+                    esp.dist.Visible = false
+                end
             else
-                for _,l in pairs(esp.skel) do l.Visible = false end
-                esp.name.Visible = false
+                esp.name.Visible=false
+                esp.dist.Visible=false
             end
 
-            -- ===== Health Bar =====
-            if HEALTH_ENABLED and torso then
-                local hp = hum.Health / hum.MaxHealth
-                local barH = 40 * hp
-                esp.health.From = Vector2.new(torso.X - 12, torso.Y + 20)
-                esp.health.To = Vector2.new(torso.X - 12, torso.Y + 20 - barH)
-                esp.health.Color = teamColor
-                esp.health.Visible = true
+            -- Line
+            if LINE_ENABLED and on then
+                esp.line.From=center
+                esp.line.To=Vector2.new(pos.X,pos.Y)
+                esp.line.Color=teamColor
+                esp.line.Visible=true
             else
-                esp.health.Visible = false
-            end
-
-            -- ===== Line =====
-            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            if LINE_ENABLED and onScreen then
-                esp.line.From = center
-                esp.line.To = Vector2.new(pos.X, pos.Y)
-                esp.line.Color = teamColor
-                esp.line.Visible = true
-            else
-                esp.line.Visible = false
+                esp.line.Visible=false
             end
         else
-            for _,l in pairs(esp.skel) do l.Visible = false end
-            esp.name.Visible = false
-            esp.line.Visible = false
-            esp.health.Visible = false
+            esp.name.Visible=false
+            esp.dist.Visible=false
+            esp.line.Visible=false
         end
     end
 end)
@@ -172,20 +143,8 @@ end)
 -- ================= UI =================
 local Tab = Window:CreateTab("ESP", 4483362458)
 
-Tab:CreateToggle({
-    Name = "ESP (Skeleton)",
-    CurrentValue = true,
-    Callback = function(v) ESP_ENABLED = v end
-})
-
-Tab:CreateToggle({
-    Name = "Line (Tracer)",
-    CurrentValue = true,
-    Callback = function(v) LINE_ENABLED = v end
-})
-
-Tab:CreateToggle({
-    Name = "Health Bar",
-    CurrentValue = true,
-    Callback = function(v) HEALTH_ENABLED = v end
-})
+Tab:CreateToggle({Name="ESP",CurrentValue=true,Callback=function(v) ESP_ENABLED=v end})
+Tab:CreateToggle({Name="Corner Box",CurrentValue=true,Callback=function(v) CORNER_ENABLED=v end})
+Tab:CreateToggle({Name="Line (Tracer)",CurrentValue=true,Callback=function(v) LINE_ENABLED=v end})
+Tab:CreateToggle({Name="Health Bar",CurrentValue=true,Callback=function(v) HEALTH_ENABLED=v end})
+Tab:CreateToggle({Name="Distance",CurrentValue=true,Callback=function(v) DIST_ENABLED=v end})
