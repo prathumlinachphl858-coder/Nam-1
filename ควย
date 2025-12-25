@@ -1,4 +1,4 @@
--- Skeleton ESP + Full Box (2D) + Corner + Distance + Line + Health | By Nam
+-- Skeleton ESP + Full Box (2D) + Distance + Line + Health | By Nam
 
 -- ================= LOAD RAYFIELD =================
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -19,7 +19,6 @@ local LocalPlayer = Players.LocalPlayer
 -- ================= SETTINGS =================
 local ESP_ENABLED = true
 local BOX_ENABLED = true
-local CORNER_ENABLED = true
 local LINE_ENABLED = true
 local HEALTH_ENABLED = true
 local DIST_ENABLED = true
@@ -42,11 +41,6 @@ local function createESP(player)
     box.Filled = false
     box.Visible = false
 
-    local corner = {
-        tl1=newLine(2), tl2=newLine(2), tr1=newLine(2), tr2=newLine(2),
-        bl1=newLine(2), bl2=newLine(2), br1=newLine(2), br2=newLine(2),
-    }
-
     local name = Drawing.new("Text")
     name.Size = 13
     name.Center = true
@@ -64,7 +58,6 @@ local function createESP(player)
 
     ESP_TABLE[player] = {
         box = box,
-        corner = corner,
         name = name,
         dist = dist,
         line = line,
@@ -75,11 +68,7 @@ end
 local function removeESP(player)
     if ESP_TABLE[player] then
         for _,v in pairs(ESP_TABLE[player]) do
-            if type(v)=="table" then
-                for _,x in pairs(v) do x:Remove() end
-            else
-                v:Remove()
-            end
+            v:Remove()
         end
         ESP_TABLE[player]=nil
     end
@@ -137,7 +126,7 @@ RunService.RenderStepped:Connect(function()
                     esp.dist.Visible = false
                 end
 
-                -- Line ESP (ใส่กลับมา)
+                -- Line ESP
                 if LINE_ENABLED and myHRP then
                     esp.line.From = Vector2.new(
                         Camera.ViewportSize.X / 2,
@@ -169,5 +158,5 @@ local Tab = Window:CreateTab("ESP", 4483362458)
 
 Tab:CreateToggle({Name="ESP",CurrentValue=true,Callback=function(v) ESP_ENABLED=v end})
 Tab:CreateToggle({Name="Full Box (2D)",CurrentValue=true,Callback=function(v) BOX_ENABLED=v end})
-Tab:CreateToggle({Name="Corner Box",CurrentValue=true,Callback=function(v) CORNER_ENABLED=v end})
 Tab:CreateToggle({Name="Distance",CurrentValue=true,Callback=function(v) DIST_ENABLED=v end})
+Tab:CreateToggle({Name="Line",CurrentValue=true,Callback=function(v) LINE_ENABLED=v end})
